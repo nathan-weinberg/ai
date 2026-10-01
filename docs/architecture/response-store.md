@@ -42,16 +42,16 @@ and Conversations are available in the production binary while SQLite remains
 opt-in. Explicit `--no-default-features` builds provide the four supported
 persistence profiles:
 
-The released container image builds `full,store-sqlite`, so it carries both
-backends. SQLite configurations use a database path under the image's writable
-state directory, as described below.
-
 | Profile | Feature selection | SQL backends |
 |---------|-------------------|--------------|
 | Backend-free | `standard,openai-all` | None; contracts, services, and filters only |
 | PostgreSQL-only | `standard,openai-all,store-postgres` | PostgreSQL through SQLx native TLS |
 | SQLite-only | `standard,openai-all,store-sqlite` | SQLite |
 | Combined | `standard,openai-all,store-all` | PostgreSQL and SQLite |
+
+The released container image builds `full,store-sqlite`, so it carries both
+backends. SQLite configurations use a database path under the image's writable
+state directory, as described below.
 
 The backend-free profile is an internal composition and testing lane. A config
 that selects an implementation absent from the binary is rejected during

@@ -5,6 +5,12 @@ name: Container
 # ------------------------------------------------------------------------------
 
 on:
+  pull_request:
+    paths:
+      - .github/scripts/container-sqlite-smoke.sh
+      - .github/workflows/container.yaml
+      - Containerfile
+      - examples/configs/openai/responses/response-store.yaml
   push:
     branches: [main]
 
@@ -44,21 +50,8 @@ jobs:
           ' || { echo "::error::missing legal files in runtime image"; exit 1; }
           echo "License label and legal files verified"
 
-      # The image builds `full,store-sqlite` and ships a praxis-owned
-      # /var/lib/praxis so SQLite-backed configurations run on it unchanged.
-      # Both halves are easy to drop by accident, so assert them here.
-      - name: Verify SQLite store backend and writable state directory
-        run: |
-          docker run --rm \
-            -v "${PWD}/examples/configs/openai/responses/response-store.yaml:/etc/praxis/praxis.yaml:ro" \
-            praxis-ai:ci --validate -c /etc/praxis/praxis.yaml \
-            || { echo "::error::image cannot validate a SQLite-backed configuration"; exit 1; }
-          docker run --rm --entrypoint sh praxis-ai:ci -c '
-            set -e
-            test -w /var/lib/praxis
-            test ! -w /etc/praxis
-          ' || { echo "::error::/var/lib/praxis must be writable and /etc/praxis must not be"; exit 1; }
-          echo "SQLite backend and state directory verified"
+      - name: Verify SQLite persistence in the runtime image
+        run: .github/scripts/container-sqlite-smoke.sh praxis-ai:ci
 
       - name: Run container
         run: docker run -d --name praxis-ai praxis-ai:ci

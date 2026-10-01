@@ -347,8 +347,8 @@ coverage-check:
 # FIPS
 # -------------------------------------------------------------------
 #
-# The published image (`full`) enables every non-experimental filter. The
-# FIPS build turns off what is known not to be FIPS 140-3 compliant yet, so
+# The published image (`full,store-sqlite`) enables every non-experimental
+# filter. The FIPS build turns off what is known not to be FIPS 140-3 compliant, so
 # nobody has to know which features to pick:
 #
 #   policy-engine        praxis-policy carries its own cryptography (sha2,

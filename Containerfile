@@ -7,7 +7,8 @@
 FROM rust:1.98-alpine3.24 AS builder
 
 # Cargo features for the published binary. `full` keeps every non-experimental
-# filter; the crate default (`standard`) leaves the heavier OpenAI groups out.
+# filter; the proxy crate defaults to `full` while the library crates default
+# to the smaller `standard` feature set.
 # `store-sqlite` is added on top of `full` (which selects only the PostgreSQL
 # backend) so the image can also serve the SQLite-backed example configs without
 # a local rebuild. SQLx compiles SQLite into the binary through
