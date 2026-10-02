@@ -56,6 +56,7 @@ SH
 chmod 755 "$workspace" "$workspace/backend.sh"
 
 "$engine" network create "$network" >/dev/null
+# The Alpine runtime image supplies BusyBox nc with the -e option.
 "$engine" run -d --rm --network "$network" --name "$backend" \
   -v "$workspace/backend.sh:/tmp/backend.sh:ro" \
   --entrypoint sh "$image" -c 'nc -lk -p 8000 -e /tmp/backend.sh' >/dev/null

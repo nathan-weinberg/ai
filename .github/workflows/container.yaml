@@ -10,6 +10,11 @@ on:
       - .github/scripts/container-sqlite-smoke.sh
       - .github/workflows/container.yaml
       - Containerfile
+      - .dockerignore
+      - Cargo.toml
+      - Cargo.lock
+      - '**/Cargo.toml'
+      - '**/*.rs'
       - examples/configs/openai/responses/response-store.yaml
   push:
     branches: [main]
