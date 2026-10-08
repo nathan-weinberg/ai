@@ -73,19 +73,22 @@ filter_chains:
           - username: gateway
             env_var: GATEWAY_AUTH_PASSWORD
 
-      # Classify Anthropic Messages traffic and promote facts to internal
-      # `x-praxis-ai-*` headers. `on_invalid: continue` lets OpenCode's Chat
-      # Completions traffic and bodyless probes pass through untouched.
-      - filter: anthropic_messages_format
-        on_invalid: continue
+      # Classify from the request head, before any body is read. This listener
+      # serves two protocols, and this is what installs the matching error
+      # formatter for each, so a proxy-generated failure reaches Claude Code as
+      # an Anthropic error and OpenCode as an OpenAI one. The request processor
+      # below covers the Anthropic Messages surface only; without this filter
+      # OpenCode would get RFC 9457 problem details that an OpenAI client
+      # cannot parse.
+      - filter: ai_operation
 
-      # Validate only the message-bearing endpoints. Scoping to `/v1/messages`
-      # keeps bodyless probes such as `GET /v1/models` — and every OpenCode
-      # `/v1/chat/completions` request — from being rejected here.
-      - filter: anthropic_validate
-        conditions:
-          - when:
-              path_prefix: "/v1/messages"
+      # Process the create-message body once: validate the envelope and promote
+      # routing facts to internal `x-praxis-ai-*` headers. No path condition is
+      # needed — the operation keys the filter, so OpenCode's
+      # `/v1/chat/completions` traffic and bodyless probes such as
+      # `GET /v1/models` are released untouched.
+      - filter: anthropic_messages_request
+        on_invalid: reject
 
       # Supply a default `anthropic-version` for non-SDK callers that omit it.
       # Real Claude Code always sends one, so this is a no-op for it.

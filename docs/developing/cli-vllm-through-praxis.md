@@ -625,11 +625,18 @@ kill "$PRAXIS_PID"
   forwards genuinely malformed Responses bodies to vLLM rather than rejecting
   them at the gateway.
 - RFC 9457 `application/problem+json` where an OpenAI client expects
-  `{"error": {...}}`: `openai_responses_request` resolves Responses operations
-  only, so it does not own the protocol decision for the Chat Completions and
-  other OpenAI traffic a coding client also sends. Put `ai_operation` ahead
-  of it, as both Codex examples do; it classifies from the request head and
-  installs the OpenAI error formatter for every OpenAI protocol.
+  `{"error": {...}}`: the chain is missing `ai_operation`. The body
+  classifiers each resolve one protocol — `openai_responses_request` covers
+  Responses, and `anthropic_messages_request` installs its formatter only on
+  the Anthropic Messages surface — so neither owns the protocol decision for
+  the Chat Completions traffic a coding client also sends, and the
+  request reaches core's error path with no formatter installed. `ai_operation`
+  classifies from the request head and installs the matching formatter for
+  every OpenAI and Anthropic protocol. Every example in section 2 leads with
+  it, directly after `basic_auth`.
+  This bites OpenCode hardest: it is the one client whose traffic
+  (`/v1/chat/completions`) shares a listener with another protocol, so a config
+  derived from an older copy sends it problem details its SDK cannot parse.
 - `400` with `maximum context length is 32768 tokens` and a requested output
   count near 21,000: Claude Code's default output budget does not fit the
   window. Set `CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192` as shown in section 4.
