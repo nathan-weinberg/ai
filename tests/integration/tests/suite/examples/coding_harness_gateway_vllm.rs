@@ -14,15 +14,15 @@
 //!
 //! These tests assert the four properties the config exists to guarantee:
 //!
-//! 1. The two chains stay split. The Responses chain terminates in an `iterative_request_router`; the Claude
-//!    Code / OpenCode chain contains no IRR at all. Merging them would route native `/v1/messages` and
-//!    `/v1/chat/completions` SSE through the IRR, which buffers a sub-request response unless a filter selects
+//! 1. The two chains stay split. The Responses chain terminates in an `iterative_request_router`; the Claude Code /
+//!    OpenCode chain contains no IRR at all. Merging them would route native `/v1/messages` and `/v1/chat/completions`
+//!    SSE through the IRR, which buffers a sub-request response unless a filter selects
 //!    `SubRequestResponseMode::Streaming` — and neither native path selects it. See
 //!    `messages_chain_has_no_irr_or_responses_filters`.
 //! 2. Each client's native wire format reaches the backend untranslated, on its own path.
 //! 3. Codex's rich client tools are lowered to plain functions on the wire the backend sees.
-//! 4. Both listeners share one gateway credential, strip every client credential, and inject the backend's own
-//!    Bearer token.
+//! 4. Both listeners share one gateway credential, strip every client credential, and inject the backend's own Bearer
+//!    token.
 //!
 //! `basic_auth` and `credential_injection` both resolve secrets at pipeline
 //! build time. `std::env::set_var` is `unsafe` (and `unsafe_code` is denied
@@ -204,7 +204,8 @@ fn responses_chain_terminates_in_the_iterative_router() {
         types,
         [
             "basic_auth",
-            "openai_responses_format",
+            "ai_operation",
+            "openai_responses_request",
             "openai_responses_request",
             "state_owner",
             "openai_response_store",
