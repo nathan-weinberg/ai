@@ -652,12 +652,18 @@ fn extract_append_back_items(
     let bytes = body.as_ref().filter(|b| !b.is_empty())?;
     let conv_id = ctx.get_metadata("responses.conversation_id")?.to_owned();
 
-    let all_items = merge_input_output_items(ctx, bytes)?;
+    let all_items = match merge_input_output_items(ctx, bytes) {
+        Ok(items) => items,
+        Err(e) => {
+            warn!(error = %e, "conversation append-back: failed to extract items");
+            return None;
+        }
+    };
 
     Some(AppendBackItems {
         conversation_id: conv_id,
         owner,
-        all_items,
+        all_items: all_items.unwrap_or_default(),
     })
 }
 
@@ -687,12 +693,14 @@ fn extract_streaming_append_back_items(ctx: &HttpFilterContext<'_>, owner: State
 
 /// Parse the response body and combine request input items with
 /// response output items. Returns `None` when both are empty.
-fn merge_input_output_items(ctx: &HttpFilterContext<'_>, bytes: &[u8]) -> Option<Vec<Value>> {
+fn merge_input_output_items(ctx: &HttpFilterContext<'_>, bytes: &[u8]) -> Result<Option<Vec<Value>>, FilterError> {
     let mut response_json: Value = match serde_json::from_slice(bytes) {
         Ok(v) => v,
         Err(e) => {
             warn!(error = %e, "conversation append-back: invalid response JSON");
-            return None;
+            return Err(FilterError::from(format!(
+                "conversation append-back: failed to parse response JSON: {e}"
+            )));
         },
     };
 
@@ -700,7 +708,7 @@ fn merge_input_output_items(ctx: &HttpFilterContext<'_>, bytes: &[u8]) -> Option
         let status = response_json.get("status").and_then(Value::as_str).unwrap_or_default();
         if status != "completed" {
             trace!(status, "conversation append-back skipped (response not completed)");
-            return None;
+            return Ok(None);
         }
     }
 
@@ -716,12 +724,12 @@ fn merge_input_output_items(ctx: &HttpFilterContext<'_>, bytes: &[u8]) -> Option
         .unwrap_or_default();
 
     if input_items.is_empty() && output_items.is_empty() {
-        return None;
+        return Ok(None);
     }
 
     let mut all_items = input_items;
     all_items.extend(output_items);
-    Some(all_items)
+    Ok(Some(all_items))
 }
 
 /// Persist items and refresh the denormalized message cache.
