@@ -1,4 +1,4 @@
-# Run Codex, Claude Code, OpenCode, or pi through Praxis and vLLM
+# Run your Code Harness through Praxis and vLLM
 
 This guide runs a real coding client through a local Praxis gateway while vLLM
 provides inference. The supported paths are:
