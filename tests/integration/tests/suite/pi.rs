@@ -915,12 +915,11 @@ fn models_json_is_schema_key_safe() {
 fn pin_array(key: &str) -> Vec<String> {
     let manifest = std::fs::read_to_string(fixture_path(PIN_MANIFEST)).expect("pin manifest should be readable");
     let needle = format!("{key} = [");
-    let start = manifest
-        .find(&needle)
+    let (_, body) = manifest
+        .split_once(&needle)
         .unwrap_or_else(|| panic!("pin manifest should declare {key}"));
-    let body = &manifest[start + needle.len()..];
-    let end = body.find(']').expect("a pin array should close with ]");
-    body[..end]
+    let (items, _) = body.split_once(']').expect("a pin array should close with ]");
+    items
         .split(',')
         .map(|item| item.trim().trim_matches('"'))
         .filter(|item| !item.is_empty())
