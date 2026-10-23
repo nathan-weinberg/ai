@@ -153,7 +153,8 @@ max_tokens = 8192
 base_url_suffix = "/v1"
 # Unknown keys are SILENTLY IGNORED, so a misspelled key drops its setting
 # without an error. `models_json_is_schema_key_safe` checks the fixture against
-# these allowlists, taken from the bundled `docs/models-configuration.md`.
+# these allowlists, taken from the bundled `docs/models-configuration.md`;
+# `schema_allowlists_match_the_manifest` keeps the test's copies in sync.
 provider_keys = [
   "name", "baseUrl", "apiKey", "api", "oauth", "headers", "compat",
   "authHeader", "models", "modelOverrides",

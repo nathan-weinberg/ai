@@ -2496,7 +2496,7 @@ jobs:
         )
       )
     runs-on: ${{ needs.gpu-start-runner.outputs.label }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
     env:

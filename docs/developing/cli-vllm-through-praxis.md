@@ -982,6 +982,9 @@ you have:
 }
 ```
 
+Replace `qwen3-8b` with the exact served name in `VLLM_MODEL` and adjust
+`contextWindow` and `maxTokens` to match your vLLM server.
+
 The `Authorization` header carries the gateway credential. Export the Basic
 token it reads, which is the base64 encoding of `gateway:<password>`:
 
@@ -1089,7 +1092,7 @@ kill "$PRAXIS_PID"
   shell that launched pi.
 - `401` from vLLM: `VLLM_API_KEY` does not match the key passed to vLLM.
 - `401` from vLLM on the Codex listener only, in the
-  [all-in-one gateway](#serving-all-three-clients-from-one-gateway): the
+  [all-in-one gateway](#serving-all-four-clients-from-one-gateway): the
   `basic_auth` prefixed onto the Codex chain strips the client credential the
   example forwards, and no `credential_injection` inside the IRR `inference`
   step replaced it. Add the injection shown in section 2, after the step's

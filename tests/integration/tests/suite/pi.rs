@@ -909,6 +909,39 @@ fn models_json_is_schema_key_safe() {
     );
 }
 
+/// Read one string array from the pin manifest, which may span several lines.
+///
+/// Line-oriented like `pin_value_in`: this crate has no `toml` dependency.
+fn pin_array(key: &str) -> Vec<String> {
+    let manifest = std::fs::read_to_string(fixture_path(PIN_MANIFEST)).expect("pin manifest should be readable");
+    let needle = format!("{key} = [");
+    let start = manifest
+        .find(&needle)
+        .unwrap_or_else(|| panic!("pin manifest should declare {key}"));
+    let body = &manifest[start + needle.len()..];
+    let end = body.find(']').expect("a pin array should close with ]");
+    body[..end]
+        .split(',')
+        .map(|item| item.trim().trim_matches('"'))
+        .filter(|item| !item.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+#[test]
+fn schema_allowlists_match_the_manifest() {
+    assert_eq!(
+        pin_array("provider_keys"),
+        PROVIDER_KEYS,
+        "PROVIDER_KEYS must mirror [pi.provider] provider_keys"
+    );
+    assert_eq!(
+        pin_array("model_keys"),
+        MODEL_KEYS,
+        "MODEL_KEYS must mirror [pi.provider] model_keys"
+    );
+}
+
 #[test]
 fn models_json_agrees_with_the_manifest() {
     let config = documented_models_json();
