@@ -459,7 +459,8 @@ def choose_run(runs, jobs_by_id):
             acceptance = [job for job in jobs if job.get("name") in (
                 "Claude Code and Anthropic SDK acceptance on real vLLM (GPU)",
                 "Codex acceptance on real vLLM (GPU)",
-                "OpenCode acceptance on real vLLM (GPU)")]
+                "OpenCode acceptance on real vLLM (GPU)",
+                "pi acceptance on real vLLM (GPU)")]
             if acceptance and all(job.get("conclusion") == "skipped" for job in acceptance):
                 return run
     return None

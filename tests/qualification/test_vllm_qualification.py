@@ -255,6 +255,20 @@ class QualificationTest(unittest.TestCase):
                 13: [{"name": "Run complete live vLLM Responses suite (GPU)", "conclusion": "skipped"}]}
         self.assertEqual(qualification.choose_run(runs, jobs)["id"], 12)
 
+    def test_pi_only_acceptance_run_does_not_hide_older_responses_run(self):
+        runs = [{"id": 20, "status": "completed"}, {"id": 21, "status": "completed"}]
+        acceptance_skipped = [{"name": name, "conclusion": "skipped"} for name in (
+            "Claude Code and Anthropic SDK acceptance on real vLLM (GPU)",
+            "Codex acceptance on real vLLM (GPU)",
+            "OpenCode acceptance on real vLLM (GPU)")]
+        jobs = {20: [{"name": "Start ephemeral EC2 GPU runner", "conclusion": "success"},
+                     {"name": "Run complete live vLLM Responses suite (GPU)", "conclusion": "success"}],
+                21: [{"name": "Start ephemeral EC2 GPU runner", "conclusion": "success"},
+                     {"name": "Run complete live vLLM Responses suite (GPU)", "conclusion": "skipped"},
+                     *acceptance_skipped,
+                     {"name": "pi acceptance on real vLLM (GPU)", "conclusion": "success"}]}
+        self.assertEqual(qualification.choose_run(runs, jobs)["id"], 20)
+
     def test_exact_run_attempt_checkout_and_profile_required(self):
         source = report()
         run = {"id": 17, "run_attempt": 2, "head_sha": "a" * 40}
