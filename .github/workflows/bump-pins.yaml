@@ -171,6 +171,7 @@ jobs:
 
           # Move the branch only if it still points where it did when inspected.
           repo_id=$(gh api "repos/$GH_REPO" --jq .node_id)
+          # shellcheck disable=SC2016 # $repo etc. are GraphQL variables, not shell
           if ! gh api graphql \
             -f query='mutation($repo: ID!, $ref: GitRefname!, $before: GitObjectID!, $after: GitObjectID!) {
               updateRefs(input: {repositoryId: $repo, refUpdates: [{name: $ref, beforeOid: $before, afterOid: $after, force: true}]}) {
