@@ -268,7 +268,8 @@ mod bump {
         bump::{checklist, display_version, names_version},
         sites::{Pin, Site},
         upstream::{
-            is_stable, newest_in_series, parse_claude_checksum, parse_hub_digest, parse_release, tags_latest_in_series,
+            is_stable, newest_in_series, newest_release, parse_claude_checksum, parse_hub_digest, parse_release,
+            tags_latest_in_series,
         },
     };
 
@@ -343,6 +344,27 @@ mod bump {
     fn github_prereleases_are_rejected() {
         let release = json!({"tag_name": "v1.5.0", "prerelease": true, "assets": []});
         assert!(parse_release(&release, "v").is_err());
+    }
+
+    #[test]
+    fn newest_github_release_honors_prefix_series_and_version_order() {
+        let releases = json!([
+            {"tag_name": "v2.0.0", "prerelease": false, "assets": []},
+            {"tag_name": "v1.10.0-rc.1", "prerelease": true, "assets": []},
+            {"tag_name": "v1.9.0", "prerelease": false, "assets": []},
+            {"tag_name": "v1.10.0", "prerelease": false, "assets": []},
+            {"tag_name": "sdk-v9.0.0", "prerelease": false, "assets": []},
+        ]);
+        let newest = |prefix, series| {
+            newest_release(&releases, prefix, series)
+                .expect("listing should parse")
+                .map(|release| release.tag)
+        };
+        assert_eq!(newest("v", None).as_deref(), Some("v2.0.0"));
+        assert_eq!(newest("v", Some(1)).as_deref(), Some("v1.10.0"));
+        assert_eq!(newest("sdk-v", None).as_deref(), Some("sdk-v9.0.0"));
+        assert_eq!(newest("v", Some(3)), None);
+        assert!(newest_release(&json!({}), "v", None).is_err());
     }
 
     #[test]

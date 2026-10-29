@@ -29,6 +29,13 @@ pub(crate) const NPM_REGISTRY: &str = "https://registry.npmjs.org";
 /// Read buffer for streamed downloads.
 const CHUNK: usize = 64 * 1024;
 
+/// GitHub releases per listing page. Codex attaches hundreds of assets to every
+/// release (~650 KB of JSON each), and GitHub times out building larger pages.
+const RELEASES_PER_PAGE: usize = 30;
+
+/// How many listing pages are searched before giving up on a repository.
+const RELEASE_PAGES: usize = 10;
+
 // -----------------------------------------------------------------------------
 // Client
 // -----------------------------------------------------------------------------
@@ -119,11 +126,35 @@ impl Upstream {
             .ok_or_else(|| format!("npm {package} has no stable {major_series}.x release"))
     }
 
-    /// The latest stable GitHub release of `repo`, whose tag must start with
-    /// `tag_prefix`.
-    pub(crate) fn github_latest(&self, repo: &str, tag_prefix: &str) -> Result<Release, String> {
-        let release = self.require_json(&format!("https://api.github.com/repos/{repo}/releases/latest"), None)?;
-        parse_release(&release, tag_prefix).map_err(|e| format!("{repo}: {e}"))
+    /// The newest stable GitHub release of `repo` whose tag starts with
+    /// `tag_prefix` and, when given, whose version is in `major_series`.
+    ///
+    /// `/releases/latest` is not used: it names a single release regardless of
+    /// prefix or series, so a new major (or another tag family sharing the
+    /// repository) would hide an eligible release behind it. The listing is
+    /// newest first, so the search stops at the first page with an eligible
+    /// release.
+    pub(crate) fn github_newest(
+        &self,
+        repo: &str,
+        tag_prefix: &str,
+        major_series: Option<u64>,
+    ) -> Result<Option<Release>, String> {
+        for page in 1..=RELEASE_PAGES {
+            let releases = self.require_json(
+                &format!("https://api.github.com/repos/{repo}/releases?per_page={RELEASES_PER_PAGE}&page={page}"),
+                None,
+            )?;
+            if let Some(release) =
+                newest_release(&releases, tag_prefix, major_series).map_err(|e| format!("{repo}: {e}"))?
+            {
+                return Ok(Some(release));
+            }
+            if releases.as_array().is_none_or(|page| page.len() < RELEASES_PER_PAGE) {
+                break;
+            }
+        }
+        Ok(None)
     }
 
     /// The linux-x64 checksum from a Claude Code release manifest.
@@ -211,6 +242,21 @@ pub(crate) fn newest_in_series(packument: &Value, major_series: u64) -> Option<S
         .cloned()
 }
 
+/// The highest eligible release in a GitHub releases listing: stable, tagged
+/// `tag_prefix<major>.<minor>.<patch>`, and in `major_series` when given.
+pub(crate) fn newest_release(
+    releases: &Value,
+    tag_prefix: &str,
+    major_series: Option<u64>,
+) -> Result<Option<Release>, String> {
+    let releases = releases.as_array().ok_or("releases response is not an array")?;
+    Ok(releases
+        .iter()
+        .filter_map(|release| parse_release(release, tag_prefix).ok())
+        .filter(|release| major_series.is_none_or(|series| major(&release.version) == Some(series)))
+        .max_by_key(|release| semver_key(&release.version)))
+}
+
 /// Parse a GitHub release object.
 pub(crate) fn parse_release(release: &Value, tag_prefix: &str) -> Result<Release, String> {
     let tag = release
@@ -220,12 +266,12 @@ pub(crate) fn parse_release(release: &Value, tag_prefix: &str) -> Result<Release
     if release.get("prerelease").and_then(Value::as_bool) == Some(true)
         || release.get("draft").and_then(Value::as_bool) == Some(true)
     {
-        return Err(format!("latest release {tag} is a prerelease or draft"));
+        return Err(format!("release {tag} is a prerelease or draft"));
     }
     let version = tag
         .strip_prefix(tag_prefix)
         .filter(|v| is_stable(v))
-        .ok_or_else(|| format!("latest release tag {tag} is not `{tag_prefix}<major>.<minor>.<patch>`"))?;
+        .ok_or_else(|| format!("release tag {tag} is not `{tag_prefix}<major>.<minor>.<patch>`"))?;
     Ok(Release {
         tag: tag.to_owned(),
         version: version.to_owned(),

@@ -187,24 +187,28 @@ fn discover_opencode(client: &OpenCode, old: &str, upstream: &Upstream) -> Resul
     Ok(Ok((version, Some(sha256))))
 }
 
-/// pi: the latest GitHub release, unless it crosses `major_series`.
+/// pi: the newest GitHub release within `major_series`.
 fn discover_pi(manifests: &Manifests, upstream: &Upstream) -> Result<Result<Discovered, String>, String> {
     let pi = &manifests.pi.pi;
-    let release = upstream.github_latest("earendil-works/pi", "v")?;
-    if check::major(&release.version) != Some(pi.major_series) {
+    let Some(release) = upstream.github_newest("earendil-works/pi", "v", Some(pi.major_series))? else {
         return Ok(Err(format!(
-            "latest release {} crosses major_series {}; re-validate the manifest by hand",
-            release.tag, pi.major_series
+            "no stable {}.x release among the recent ones; re-validate the manifest by hand",
+            pi.major_series
         )));
-    }
+    };
     let sha256 = release.asset_sha256(&pi.archive)?.to_owned();
     Ok(Ok((release.version, Some(sha256))))
 }
 
-/// Codex: the latest GitHub release under `release_tag_prefix`.
+/// Codex: the newest GitHub release under `release_tag_prefix`.
 fn discover_codex(manifests: &Manifests, upstream: &Upstream) -> Result<Result<Discovered, String>, String> {
     let codex = &manifests.codex.codex;
-    let release = upstream.github_latest("openai/codex", &codex.release_tag_prefix)?;
+    let Some(release) = upstream.github_newest("openai/codex", &codex.release_tag_prefix, None)? else {
+        return Ok(Err(format!(
+            "no stable `{}` release among the recent ones",
+            codex.release_tag_prefix
+        )));
+    };
     let sha256 = release.asset_sha256(&codex.archive)?.to_owned();
     Ok(Ok((release.version, Some(sha256))))
 }
@@ -222,7 +226,9 @@ fn discover_vllm(old: &str, upstream: &Upstream) -> Result<Result<Discovered, St
     let Some(hub_repository) = name.strip_prefix("docker.io/") else {
         return Ok(Err(format!("{name} is not a Docker Hub image")));
     };
-    let release = upstream.github_latest("vllm-project/vllm", "v")?;
+    let Some(release) = upstream.github_newest("vllm-project/vllm", "v", None)? else {
+        return Ok(Err("no stable release among the recent ones".to_owned()));
+    };
     Ok(match upstream.docker_hub_digest(hub_repository, &release.tag)? {
         Some(digest) => Ok((format!("{name}:{}@{digest}", release.tag), None)),
         None => Err(format!("{name}:{} is not published on Docker Hub yet", release.tag)),
